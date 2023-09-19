@@ -105,6 +105,8 @@ CONF_ECO_VALUE = "eco_value"
 
 # vacuum
 CONF_POWERGO_DP = "powergo_dp"
+CONF_PAUSE_DP = "pause_dp"
+CONF_PREFER_POWERGO = "use_powergo_to_start"
 CONF_IDLE_STATUS_VALUE = "idle_status_value"
 CONF_RETURNING_STATUS_VALUE = "returning_status_value"
 CONF_DOCKED_STATUS_VALUE = "docked_status_value"
