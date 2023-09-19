@@ -105,7 +105,28 @@ def map_range(value, from_lower, from_upper, to_lower, to_upper):
 def flow_schema(dps):
     """Return schema used in config flow."""
     return {
-        vol.Optional(CONF_BRIG##WiP): vol.In(dps),
+        vol.Optional(CONF_BRIGHTNESS): vol.In(dps),
+        vol.Optional(CONF_COLOR_TEMP): vol.In(dps),
+        vol.Optional(CONF_BRIGHTNESS_LOWER, default=DEFAULT_LOWER_BRIGHTNESS): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=10000)
+        ),
+        vol.Optional(CONF_BRIGHTNESS_UPPER, default=DEFAULT_UPPER_BRIGHTNESS): vol.All(
+            vol.Coerce(int), vol.Range(min=0, max=10000)
+        ),
+        vol.Optional(CONF_COLOR_MODE): vol.In(dps),
+        vol.Optional(CONF_COLOR): vol.In(dps),
+        vol.Optional(CONF_COLOR_TEMP_MIN_KELVIN, default=DEFAULT_MIN_KELVIN): vol.All(
+            vol.Coerce(int), vol.Range(min=1500, max=8000)
+        ),
+        vol.Optional(CONF_COLOR_TEMP_MAX_KELVIN, default=DEFAULT_MAX_KELVIN): vol.All(
+            vol.Coerce(int), vol.Range(min=1500, max=8000)
+        ),
+        vol.Optional(
+            CONF_COLOR_TEMP_REVERSE,
+            default=DEFAULT_COLOR_TEMP_REVERSE,
+            description={"suggested_value": DEFAULT_COLOR_TEMP_REVERSE},
+        ): bool,
+        vol.Optional(CONF_SCENE): vol.In(dps),
         vol.Optional(CONF_CUST_SCENE): str,
         vol.Optional(CONF_CUST_FRIENDLY): str,
         vol.Optional(
