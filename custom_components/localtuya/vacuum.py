@@ -186,7 +186,7 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
         elif self._state != STATE_PAUSED and self._config[CONF_PREFER_POWERGO]:
             await self._device.set_dp(True, self._config[CONF_POWERGO_DP])   
         else:
-            await self.async_pause(self)
+            await self.async_pause()
 
     async def async_pause(self, **kwargs):
         """Stop the vacuum cleaner, do not return to base."""
