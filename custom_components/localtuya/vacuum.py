@@ -30,6 +30,7 @@ from .const import (
     CONF_CLEAN_RECORD_DP,
     CONF_CLEAN_TIME_DP,
     CONF_DOCKED_STATUS_VALUE,
+    CONF_CLEANING_STATUS_VALUE,
     CONF_FAN_SPEED_DP,
     CONF_FAN_SPEEDS,
     CONF_FAULT_DP,
@@ -57,6 +58,7 @@ DEFAULT_IDLE_STATUS = "standby,sleep"
 DEFAULT_RETURNING_STATUS = "docking"
 DEFAULT_DOCKED_STATUS = "charging,chargecompleted"
 DEFAULT_MODES = "smart,wall_follow,spiral,single"
+DEFAULT_CLEANING_STATUS = "smart_clean,zone_clean,part_clean,wallfollow,selectroom"
 DEFAULT_FAN_SPEEDS = "low,normal,high"
 DEFAULT_PAUSED_STATE = "paused"
 DEFAULT_RETURN_MODE = "chargego"
@@ -69,6 +71,7 @@ def flow_schema(dps):
         vol.Required(CONF_IDLE_STATUS_VALUE, default=DEFAULT_IDLE_STATUS): str,
         vol.Required(CONF_POWERGO_DP): vol.In(dps),
         vol.Required(CONF_DOCKED_STATUS_VALUE, default=DEFAULT_DOCKED_STATUS): str,
+        vol.Required(CONF_CLEANING_STATUS_VALUE, default=DEFAULT_CLEANING_STATUS): str,
         vol.Optional(
             CONF_RETURNING_STATUS_VALUE, default=DEFAULT_RETURNING_STATUS
         ): str,
@@ -110,6 +113,10 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
         self._docked_status_list = []
         if self.has_config(CONF_DOCKED_STATUS_VALUE):
             self._docked_status_list = self._config[CONF_DOCKED_STATUS_VALUE].split(",")
+
+        self._cleaning_status_list = []
+        if self.has_config(CONF_CLEANING_STATUS_VALUE):
+            self._cleaning_status_list = self._config[CONF_CLEANING_STATUS_VALUE].split(",")
 
         self._fan_speed_list = []
         if self.has_config(CONF_FAN_SPEEDS):
@@ -168,7 +175,10 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
 
     async def async_start(self, **kwargs):
         """Turn the vacuum on and start cleaning."""
-        await self._device.set_dp(True, self._config[CONF_POWERGO_DP])
+        if hasattr(self, "_modes_list") and self._state != STATE_PAUSED:
+            await self._device.set_dp(self._modes_list[0], self._config[CONF_MODE_DP])
+        else:
+            await self._device.set_dp(True, self._config[CONF_POWERGO_DP])
 
     async def async_pause(self, **kwargs):
         """Stop the vacuum cleaner, do not return to base."""
@@ -219,12 +229,14 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
             self._state = STATE_IDLE
         elif state_value in self._docked_status_list:
             self._state = STATE_DOCKED
+        elif state_value in self._cleaning_status_list:
+            self._state = STATE_CLEANING
         elif state_value == self._config[CONF_RETURNING_STATUS_VALUE]:
             self._state = STATE_RETURNING
         elif state_value == self._config[CONF_PAUSED_STATE]:
             self._state = STATE_PAUSED
         else:
-            self._state = STATE_CLEANING
+            self._state = state_value
 
         if self.has_config(CONF_BATTERY_DP):
             self._battery_level = self.dps_conf(CONF_BATTERY_DP)

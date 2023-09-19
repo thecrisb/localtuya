@@ -136,6 +136,7 @@
                     "idle_status_value": "Idle Status (comma-separated)",
                     "returning_status_value": "Returning Status",
                     "docked_status_value": "Docked Status (comma-separated)",
+                    "cleaning_status_value": "Cleaning Status (comma-separated)",
                     "fault_dp": "Fault DP (Usually 11)",
                     "battery_dp": "Battery status DP (Usually 14)",
                     "mode_dp": "Mode DP (Usually 27)",
