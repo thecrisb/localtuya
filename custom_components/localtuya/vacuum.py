@@ -22,6 +22,7 @@ from .const import (
     CONF_CLEAN_RECORD_DP,
     CONF_CLEAN_TIME_DP,
     CONF_DOCKED_STATUS_VALUE,
+    CONF_CLEANING_STATUS_VALUE,
     CONF_FAN_SPEED_DP,
     CONF_FAN_SPEEDS,
     CONF_FAULT_DP,
@@ -52,6 +53,7 @@ DEFAULT_IDLE_STATUS = "standby,sleep"
 DEFAULT_RETURNING_STATUS = "docking"
 DEFAULT_DOCKED_STATUS = "charging,chargecompleted"
 DEFAULT_MODES = "smart,wall_follow,spiral,single"
+DEFAULT_CLEANING_STATUS = "smart_clean,zone_clean,part_clean,wallfollow,selectroom"
 DEFAULT_FAN_SPEEDS = "low,normal,high"
 DEFAULT_PAUSED_STATE = "paused"
 DEFAULT_RETURN_MODE = "chargego"

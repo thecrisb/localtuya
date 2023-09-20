@@ -29,6 +29,8 @@ from .const import (
     CONF_COLOR_TEMP_MIN_KELVIN,
     CONF_COLOR_TEMP_REVERSE,
     CONF_MUSIC_MODE,
+    CONF_CUST_SCENE,
+    CONF_CUST_FRIENDLY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -125,6 +127,8 @@ def flow_schema(dps):
             description={"suggested_value": DEFAULT_COLOR_TEMP_REVERSE},
         ): bool,
         vol.Optional(CONF_SCENE): vol.In(dps),
+        vol.Optional(CONF_CUST_SCENE): str,
+        vol.Optional(CONF_CUST_FRIENDLY): str,
         vol.Optional(
             CONF_MUSIC_MODE, default=False, description={"suggested_value": False}
         ): bool,
@@ -166,8 +170,14 @@ class LocaltuyaLight(LocalTuyaEntity, LightEntity):
         self._effect = None
         self._effect_list = []
         self._scenes = None
+        ##WiP
         if self.has_config(CONF_SCENE):
-            if self._config.get(CONF_SCENE) < 20:
+            if self.has_config(CONF_CUST_SCENE):
+                cust_vals = self._config[CONF_CUST_SCENE].split(",")
+                friendly_vals = self._config.get(CONF_CUST_FRIENDLY,self._config[CONF_CUST_SCENE]).split(",")
+                friendly_vals.extend(cust_vals[len(friendly_vals):])
+                self._scenes = dict(zip(friendly_vals, cust_vals))
+            elif self._config.get(CONF_SCENE) < 20:
                 self._scenes = SCENE_LIST_RGBW_255
             elif self._config.get(CONF_BRIGHTNESS) is None:
                 self._scenes = SCENE_LIST_RGB_1000
@@ -248,7 +258,7 @@ class LocaltuyaLight(LocalTuyaEntity, LightEntity):
         """Flag supported features."""
         supports = 0
         if self.has_config(CONF_BRIGHTNESS):
-            supports |= SUPPORT_BRIGHTNESS
+            supports |= SUPPORT_BRIGHTNESS 
         if self.has_config(CONF_COLOR_TEMP):
             supports |= SUPPORT_COLOR_TEMP
         if self.has_config(CONF_COLOR):
