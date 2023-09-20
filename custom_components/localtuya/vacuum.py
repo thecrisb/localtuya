@@ -11,15 +11,7 @@ from homeassistant.components.vacuum import (
     STATE_IDLE,
     STATE_PAUSED,
     STATE_RETURNING,
-    SUPPORT_BATTERY,
-    SUPPORT_FAN_SPEED,
-    SUPPORT_LOCATE,
-    SUPPORT_PAUSE,
-    SUPPORT_RETURN_HOME,
-    SUPPORT_START,
-    SUPPORT_STATE,
-    SUPPORT_STATUS,
-    SUPPORT_STOP,
+    VacuumEntityFeature,
     StateVacuumEntity,
 )
 
@@ -43,6 +35,9 @@ from .const import (
     CONF_RETURN_MODE,
     CONF_RETURNING_STATUS_VALUE,
     CONF_STOP_STATUS,
+    CONF_PAUSE_DP,
+    CONF_PREFER_POWERGO,
+    CONF_CLEANING_STATUS_VALUE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,32 +57,39 @@ DEFAULT_CLEANING_STATUS = "smart_clean,zone_clean,part_clean,wallfollow,selectro
 DEFAULT_FAN_SPEEDS = "low,normal,high"
 DEFAULT_PAUSED_STATE = "paused"
 DEFAULT_RETURN_MODE = "chargego"
-DEFAULT_STOP_STATUS = "standby"
-
+DEFAULT_CLEANING_STATUS = "smart,random,wall_follow,spiral,left_spiral,right_spiral,right_bow,left_bow,partial_bow,mop"
 
 def flow_schema(dps):
-    """Return schema used in config flow."""
     return {
+        
         vol.Required(CONF_IDLE_STATUS_VALUE, default=DEFAULT_IDLE_STATUS): str,
-        vol.Required(CONF_POWERGO_DP): vol.In(dps),
         vol.Required(CONF_DOCKED_STATUS_VALUE, default=DEFAULT_DOCKED_STATUS): str,
         vol.Required(CONF_CLEANING_STATUS_VALUE, default=DEFAULT_CLEANING_STATUS): str,
         vol.Optional(
             CONF_RETURNING_STATUS_VALUE, default=DEFAULT_RETURNING_STATUS
         ): str,
-        vol.Optional(CONF_BATTERY_DP): vol.In(dps),
+        vol.Optional(CONF_PAUSED_STATE, default=DEFAULT_PAUSED_STATE): str,
+
+        vol.Required(CONF_POWERGO_DP): vol.In(dps),
+        vol.Optional(CONF_PAUSE_DP): vol.In(dps),
+        vol.Optional(CONF_PREFER_POWERGO, default=False): bool,
+
         vol.Optional(CONF_MODE_DP): vol.In(dps),
         vol.Optional(CONF_MODES, default=DEFAULT_MODES): str,
         vol.Optional(CONF_RETURN_MODE, default=DEFAULT_RETURN_MODE): str,
+        vol.Optional(CONF_STOP_STATUS): str,  
+
         vol.Optional(CONF_FAN_SPEED_DP): vol.In(dps),
         vol.Optional(CONF_FAN_SPEEDS, default=DEFAULT_FAN_SPEEDS): str,
+        
+        vol.Optional(CONF_BATTERY_DP): vol.In(dps),
+        
         vol.Optional(CONF_CLEAN_TIME_DP): vol.In(dps),
         vol.Optional(CONF_CLEAN_AREA_DP): vol.In(dps),
         vol.Optional(CONF_CLEAN_RECORD_DP): vol.In(dps),
+        
         vol.Optional(CONF_LOCATE_DP): vol.In(dps),
         vol.Optional(CONF_FAULT_DP): vol.In(dps),
-        vol.Optional(CONF_PAUSED_STATE, default=DEFAULT_PAUSED_STATE): str,
-        vol.Optional(CONF_STOP_STATUS, default=DEFAULT_STOP_STATUS): str,
     }
 
 
@@ -127,24 +129,24 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
         _LOGGER.debug("Initialized vacuum [%s]", self.name)
 
     @property
-    def supported_features(self):
+    def supported_features(self) -> VacuumEntityFeature:
         """Flag supported features."""
         supported_features = (
-            SUPPORT_START
-            | SUPPORT_PAUSE
-            | SUPPORT_STOP
-            | SUPPORT_STATUS
-            | SUPPORT_STATE
+            VacuumEntityFeature.START
+            | VacuumEntityFeature.PAUSE
+            | VacuumEntityFeature.STOP
+            | VacuumEntityFeature.STATUS
+            | VacuumEntityFeature.STATE
         )
 
         if self.has_config(CONF_RETURN_MODE):
-            supported_features = supported_features | SUPPORT_RETURN_HOME
+            supported_features = supported_features | VacuumEntityFeature.RETURN_HOME
         if self.has_config(CONF_FAN_SPEED_DP):
-            supported_features = supported_features | SUPPORT_FAN_SPEED
+            supported_features = supported_features | VacuumEntityFeature.FAN_SPEED
         if self.has_config(CONF_BATTERY_DP):
-            supported_features = supported_features | SUPPORT_BATTERY
+            supported_features = supported_features | VacuumEntityFeature.BATTERY
         if self.has_config(CONF_LOCATE_DP):
-            supported_features = supported_features | SUPPORT_LOCATE
+            supported_features = supported_features | VacuumEntityFeature.LOCATE
 
         return supported_features
 
@@ -175,14 +177,22 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
 
     async def async_start(self, **kwargs):
         """Turn the vacuum on and start cleaning."""
+        if self._state in STATE_CLEANING:
+            return
         if hasattr(self, "_modes_list") and self._state != STATE_PAUSED:
             await self._device.set_dp(self._modes_list[0], self._config[CONF_MODE_DP])
+        elif self._state != STATE_PAUSED and self._config[CONF_PREFER_POWERGO]:
+            await self._device.set_dp(True, self._config[CONF_POWERGO_DP])   
         else:
-            await self._device.set_dp(True, self._config[CONF_POWERGO_DP])
+            await self.async_pause()
 
     async def async_pause(self, **kwargs):
         """Stop the vacuum cleaner, do not return to base."""
-        await self._device.set_dp(False, self._config[CONF_POWERGO_DP])
+        if self.has_config(CONF_PAUSE_DP):
+            # toggling this because CONF_PAUSE_DP may be inverted
+            await self._device.set_dp(not self.dps_conf(CONF_PAUSE_DP) ,self._config[CONF_PAUSE_DP])
+        else:
+            await self._device.set_dp( True if self._state == STATE_PAUSED else False , self._config[CONF_POWERGO_DP])
 
     async def async_return_to_base(self, **kwargs):
         """Set the vacuum cleaner to return to the dock."""
@@ -200,7 +210,7 @@ class LocaltuyaVacuum(LocalTuyaEntity, StateVacuumEntity):
                 self._config[CONF_STOP_STATUS], self._config[CONF_MODE_DP]
             )
         else:
-            _LOGGER.error("Missing command for stop in commands set.")
+            await self._device.set_dp(False, self._config[CONF_POWERGO_DP])
 
     async def async_clean_spot(self, **kwargs):
         """Perform a spot clean-up."""
