@@ -157,6 +157,8 @@
                     "color_temp_max_kelvin": "Massima temperatura di colore in k",
                     "music_mode": "Modalità musicale disponibile",
                     "scene": "Scena",
+                    "scenes_availible": "Sostituisci i valori della scena disponibili (separato da virgola)", 
+                    "scenes_availible_friendly": "Nomi delle scene sostituiti (separato da virgola)",
                     "select_options": "Opzioni valide, voci separate da una vigola (;)",
                     "select_options_friendly": "Opzioni intuitive, voci separate da una virgola",
                     "fan_speed_control": "DP di controllo di velocità del ventilatore",
